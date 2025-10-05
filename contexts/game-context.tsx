@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 import cropsData from "@/public/crops-data.json";
 
 interface CropCell {
@@ -41,6 +47,13 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
+// 🎵 helper for playing sound easily
+const playSound = (path: string, volume = 0.7) => {
+  const audio = new Audio(path);
+  audio.volume = volume;
+  audio.play().catch(() => {}); // avoid autoplay errors
+};
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const [field, setField] = useState<(CropCell | null)[][]>(
     Array(5)
@@ -52,7 +65,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     water: 0,
     fertilizer: 0,
   });
-  const [money, setMoney] = useState(300); // Starting money
+  const [money, setMoney] = useState(300);
   const [selectedCrop, setSelectedCrop] = useState<string | null>(null);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
 
@@ -76,6 +89,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         [cropType]: (prev.seeds[cropType] || 0) - 1,
       },
     }));
+
+    playSound("/sounds/plant.mp3", 0.5);
   };
 
   const addSeedsToInventory = (cropType: string, amount: number) => {
@@ -95,6 +110,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (money >= cost) {
       setMoney((prev) => prev - cost);
       addSeedsToInventory(cropType, amount);
+      playSound("/sounds/buy.mp3", 0.5);
       return true;
     }
     return false;
@@ -105,6 +121,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (money >= cost) {
       setMoney((prev) => prev - cost);
       setInventory((prev) => ({ ...prev, water: prev.water + amount }));
+      playSound("/sounds/buy.mp3", 0.5);
       return true;
     }
     return false;
@@ -118,12 +135,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         ...prev,
         fertilizer: prev.fertilizer + amount,
       }));
+      playSound("/sounds/buy.mp3", 0.5);
       return true;
     }
     return false;
   };
 
-  // Helper: compute totals for current planted crops
   const computeTotals = (fld: (CropCell | null)[][]) =>
     fld.flat().reduce(
       (totals, cell) => {
@@ -141,20 +158,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const planted = field.flat().filter(Boolean) as CropCell[];
     if (planted.length === 0) return;
 
-    // compute numeric totals (do NOT use toFixed here)
     const { water: totalWaterNeeded, fertilizer: totalFertilizerNeeded } =
       computeTotals(field);
 
-    // require full amounts to apply (you can change this to partial apply logic if you prefer)
     if (
       inventory.water < totalWaterNeeded ||
       inventory.fertilizer < totalFertilizerNeeded
     ) {
-      // Not enough resources — do nothing (or you could partial-apply)
       return;
     }
 
-    // subtract (use functional update to avoid stale closure), keep numeric and round to 1 decimal
     setInventory((prev) => {
       const newWater = Math.max(
         0,
@@ -167,28 +180,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
       return { ...prev, water: newWater, fertilizer: newFertilizer };
     });
 
-    // mark water/fertilizer applied and grow each crop to final stage
     setField((prevField) =>
       prevField.map((row) =>
         row.map((cell) => {
           if (!cell) return null;
           const cropData =
             cropsData.crops[cell.type as keyof typeof cropsData.crops];
-          const addedWater = cropData.waterNeed;
-          const addedFertilizer = cropData.fertilizerNeed;
-
           return {
             ...cell,
-            waterApplied: Number((cell.waterApplied + addedWater).toFixed(1)),
-            fertilizerApplied: Number(
-              (cell.fertilizerApplied + addedFertilizer).toFixed(1)
+            waterApplied: Number(
+              (cell.waterApplied + cropData.waterNeed).toFixed(1)
             ),
-            // grow to final stage (use cropData.growthStages if you prefer)
+            fertilizerApplied: Number(
+              (cell.fertilizerApplied + cropData.fertilizerNeed).toFixed(1)
+            ),
             growthStage: cropData.growthStages ?? 4,
           };
         })
       )
     );
+
+    playSound("/sounds/water.mp3", 0.6);
   };
 
   const harvestField = (): Record<string, number> => {
@@ -204,6 +216,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    if (totalEarnings > 0) playSound("/sounds/harvest.mp3", 0.7);
+
     setMoney((prev) => prev + totalEarnings);
     setField(
       Array(5)
@@ -214,7 +228,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return yields;
   };
 
-  // compute whether a harvest is possible (fields filled AND enough resources)
   const totalsNow = computeTotals(field);
   const canHarvest =
     field.flat().every((cell) => cell !== null) &&

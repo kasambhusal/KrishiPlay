@@ -1,93 +1,120 @@
 "use client";
 
-import { useState } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls, Sky, Float, Text } from "@react-three/drei";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useGame } from "@/contexts/game-context";
-import cropsData from "@/public/crops-data.json";
-
-const cropIcons: Record<string, string> = {
-  cauliflower: "🥦",
-  paddy: "🌾",
-  wheat: "🌾",
-  onion: "🧅",
-  maize: "🌽",
-};
+import { useState, useEffect, Suspense } from "react";
 
 export default function CropSelection({
   onComplete,
 }: {
   onComplete: () => void;
 }) {
-  const { addSeedsToInventory } = useGame();
-  const [selectedCrops, setSelectedCrops] = useState<Set<string>>(new Set());
+  const [sceneReady, setSceneReady] = useState(false);
+  const [showButton, setShowButton] = useState(false);
 
-  const toggleCrop = (cropId: string) => {
-    const newSelected = new Set(selectedCrops);
-    if (newSelected.has(cropId)) {
-      newSelected.delete(cropId);
-    } else {
-      newSelected.add(cropId);
-    }
-    setSelectedCrops(newSelected);
-  };
-
-  const handleContinue = () => {
-    // Add initial seeds to inventory
-    selectedCrops.forEach((cropId) => {
-      addSeedsToInventory(cropId, 0); // Start with 10 seeds of each selected crop
-    });
-    onComplete();
-  };
+  useEffect(() => {
+    const delay1 = setTimeout(() => setSceneReady(true), 800); // Start rendering scene after 0.8s
+    const delay2 = setTimeout(() => setShowButton(true), 3500);
+    return () => {
+      clearTimeout(delay1);
+      clearTimeout(delay2);
+    };
+  }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="max-w-4xl w-full space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-foreground">
-            Select Your Crops
-          </h1>
-          <p className="text-muted-foreground">
-            Choose the crops you want to grow in your farm
-          </p>
-        </div>
+    <div className="relative w-full h-screen bg-gradient-to-b from-sky-100 to-green-100 overflow-hidden">
+      {/* 3D Scene (lazy rendered) */}
+      {sceneReady && (
+        <Suspense
+          fallback={
+            <div className="absolute inset-0 flex items-center justify-center text-green-700 font-semibold text-xl">
+              Loading Farm...
+            </div>
+          }
+        >
+          <Canvas camera={{ position: [0, 3, 6], fov: 55 }}>
+            <ambientLight intensity={0.8} />
+            <directionalLight position={[5, 10, 5]} intensity={1.2} />
+            <Sky sunPosition={[100, 10, 100]} turbidity={8} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(cropsData.crops).map(([id, crop]) => (
-            <Card
-              key={id}
-              className={`p-6 cursor-pointer transition-all hover:scale-105 ${
-                selectedCrops.has(id) ? "ring-2 ring-primary bg-primary/5" : ""
-              }`}
-              onClick={() => toggleCrop(id)}
-            >
-              <div className="flex items-center gap-4">
-                <div className="text-5xl">{cropIcons[id]}</div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{crop.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    ${crop.baseCost}/seed
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Market: ${crop.marketPrice}/kg
-                  </p>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+            {/* Floating Title */}
+            <Float speed={2} rotationIntensity={0.4}>
+              <Text
+                position={[0, 1, 0]}
+                fontSize={0.8}
+                color="#2e7d32"
+                anchorX="center"
+                anchorY="middle"
+              >
+                KrishiPlay
+              </Text>
+            </Float>
 
-        <div className="flex justify-center">
+            {/* Grass */}
+            <mesh rotation-x={-Math.PI / 2} position={[0, -1, 0]}>
+              <planeGeometry args={[20, 20]} />
+              <meshStandardMaterial color="#8FBC8F" />
+            </mesh>
+
+            {/* Trees */}
+            {[...Array(6)].map((_, i) => (
+              <group
+                key={i}
+                position={[Math.random() * 12 - 6, -1, Math.random() * 12 - 6]}
+              >
+                <mesh>
+                  <cylinderGeometry args={[0.1, 0.1, 1]} />
+                  <meshStandardMaterial color="#8B4513" />
+                </mesh>
+                <mesh position={[0, 0.8, 0]}>
+                  <sphereGeometry args={[0.5, 16, 16]} />
+                  <meshStandardMaterial color="#2E8B57" />
+                </mesh>
+              </group>
+            ))}
+
+            <OrbitControls enableZoom={false} enablePan={false} />
+          </Canvas>
+        </Suspense>
+      )}
+
+      {/* Overlay Text */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: sceneReady ? 1 : 0, y: sceneReady ? 0 : 20 }}
+        transition={{ delay: 1, duration: 1.2, ease: "easeOut" }}
+        className="absolute bottom-36 w-full text-center"
+      >
+        <h2 className="text-3xl md:text-4xl font-extrabold text-green-800 drop-shadow-lg">
+          Welcome to Your Virtual Farm 🌾
+        </h2>
+        <p className="text-gray-700 mt-2 font-medium">
+          Experience farming like never before — plant, water, and harvest your
+          dream crops! <br />
+          Get personalized crop recommendations for your location with{" "}
+          <span className="text-green-700 font-semibold">Krishi AI</span>.
+        </p>
+      </motion.div>
+
+      {/* Start Button */}
+      {showButton && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+          className="absolute bottom-16 w-full text-center"
+        >
           <Button
             size="lg"
-            onClick={handleContinue}
-            disabled={selectedCrops.size === 0}
-            className="px-8"
+            onClick={onComplete}
+            className="px-10 py-3 text-lg bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg cursor-pointer"
           >
-            Start Farming ({selectedCrops.size} crops selected)
+            Start Farming 🚜
           </Button>
-        </div>
-      </div>
+        </motion.div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { useGame } from "@/contexts/game-context";
 import cropsData from "@/public/crops-data.json";
 import { motion } from "framer-motion";
+import MusicToggleButton from "./toggle-music";
 
 interface GameHUDProps {
   location: { lat: number; lon: number };
@@ -76,6 +77,7 @@ export default function GameHUD({
           </div>
         </div>
       </Card>
+      <MusicToggleButton />
 
       {/* Money Display (Top Center) */}
       <Card className="absolute top-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-card/90 backdrop-blur-sm">
