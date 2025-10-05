@@ -1,0 +1,69 @@
+{
+  "crops": {
+    "cauliflower": {
+      "name": "Cauliflower",
+      "waterNeed": 12,
+      "fertilizerNeed": 1.5,
+      "optimalTempMin": 18,
+      "optimalTempMax": 24,
+      "yieldPerPlant": 2.2,
+      "marketPrice": 3.5,
+      "baseCost": 0.5,
+      "icon": "🥦",
+      "color": "#E8F5E9",
+      "growthStages": 4
+    },
+    "paddy": {
+      "name": "Paddy",
+      "waterNeed": 30,
+      "fertilizerNeed": 2,
+      "optimalTempMin": 20,
+      "optimalTempMax": 30,
+      "yieldPerPlant": 2.3,
+      "marketPrice": 1.2,
+      "baseCost": 0.4,
+      "icon": "🌾",
+      "color": "#FFF9C4",
+      "growthStages": 4
+    },
+    "wheat": {
+      "name": "Wheat",
+      "waterNeed": 15,
+      "fertilizerNeed": 1,
+      "optimalTempMin": 15,
+      "optimalTempMax": 25,
+      "yieldPerPlant": 1.8,
+      "marketPrice": 5.0,
+      "baseCost": 0.5,
+      "icon": "🌾",
+      "color": "#FFECB3",
+      "growthStages": 4
+    },
+    "onion": {
+      "name": "Onion",
+      "waterNeed": 10,
+      "fertilizerNeed": 0.8,
+      "optimalTempMin": 16,
+      "optimalTempMax": 28,
+      "yieldPerPlant": 1.8,
+      "marketPrice": 2.0,
+      "baseCost": 0.3,
+      "icon": "🧅",
+      "color": "#F3E5F5",
+      "growthStages": 4
+    },
+    "maize": {
+      "name": "Maize",
+      "waterNeed": 18,
+      "fertilizerNeed": 1.2,
+      "optimalTempMin": 18,
+      "optimalTempMax": 27,
+      "yieldPerPlant": 2.6,
+      "marketPrice": 2.2,
+      "baseCost": 0.8,
+      "icon": "🌽",
+      "color": "#FFF8E1",
+      "growthStages": 4
+    }
+  }
+}
