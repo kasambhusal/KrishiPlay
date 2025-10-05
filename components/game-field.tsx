@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Field3D from "@/components/field-3d";
+import GroqRecommendation from "@/components/gemini-recommendation";
 import GameHUD from "@/components/game-hud";
 import ShopModal from "@/components/shop-modal";
 import HarvestModal from "@/components/harvest-modal";
@@ -44,7 +45,10 @@ export default function GameField({ location }: GameFieldProps) {
         onOpenShop={setShopOpen}
         onHarvest={() => setHarvestModalOpen(true)}
       />
-
+      {/* 🌾 Gemini Recommendation Button */}
+      {weatherData && (
+        <GroqRecommendation location={location} weatherData={weatherData} />
+      )}
       {shopOpen && (
         <ShopModal
           type={shopOpen}
