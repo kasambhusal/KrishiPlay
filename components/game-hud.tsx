@@ -69,7 +69,7 @@ export default function GameHUD({
         <div className="space-y-2 text-sm">
           <div className="font-semibold text-foreground">Weather Data</div>
           <div className="text-muted-foreground">
-            <div>🌡 Temp: {weatherData?.temperature ?? "--"}°C</div>
+            <div>🌡 Temp: {weatherData?.temperature.toFixed(2) ?? "--"}°C</div>
             <div>
               📍 Location: {location.lat.toFixed(2)}, {location.lon.toFixed(2)}
             </div>
