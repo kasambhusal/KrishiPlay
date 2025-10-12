@@ -1,42 +1,72 @@
-// /app/api/gemini/route.ts (Next.js 13+/App Router)
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
+import { GoogleGenAI } from "@google/genai";
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Initialize the client
+// IMPORTANT: The client is initialized outside the handler to avoid performance issues
+// on every request.
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+
+// Define the system instruction for the AI's persona.
+const SYSTEM_INSTRUCTION = `
+You are **Krishi AI**, a friendly and knowledgeable Nepali agricultural assistant.
+Your job: Give practical, simple, and accurate crop recommendations or answers.
+**IMPORTANT:** Your response must be generated entirely in the English language.
+
+Output style:
+- Start with a warm greeting in English.
+- Provide a clear explanation.
+- **Always list crop recommendations or suggestions using bullet points.**
+- Avoid overly long paragraphs.
+`.trim();
 
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
 
-    const chatCompletion = await groq.chat.completions.create({
-      model: "qwen/qwen3-32b", // good reasoning + long context
-      temperature: 0.6,
-      max_completion_tokens: 256,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an AI agricultural assistant that provides realistic and location-based crop recommendations.",
-        },
+    if (!prompt) {
+      return NextResponse.json(
+        { error: "No prompt provided." },
+        { status: 400 }
+      );
+    }
+
+    // Configure generation settings. 
+    // TypeScript fix: 'systemInstruction' must be nested inside the 'config' object.
+    // Optimization: Increased maxOutputTokens to 2048 for a more complete response.
+    const config = {
+      temperature: 0.8,
+      topP: 0.9,
+      topK: 40,
+      maxOutputTokens: 2048, // Increased for a more comprehensive response
+      systemInstruction: SYSTEM_INSTRUCTION, // Moved here to fix the type error
+    };
+
+    // Call the API using the correct structure:
+    // The systemInstruction is now correctly passed within the 'config' field.
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [
         {
           role: "user",
-          content: prompt,
+          parts: [{ text: prompt }], // Only the user query here
         },
       ],
+      config: config,
+      // Removed the top-level systemInstruction field
     });
 
-    const result =
-      chatCompletion.choices?.[0]?.message?.content?.trim() || "No result found.";
-
-    // Split numbered list like "1. Rice\n2. Maize" into array
-    const recommendations = result
-      .split(/\n+/)
-      .map((line) => line.replace(/^\d+\.\s*/, "").trim())
-      .filter(Boolean);
-
-    return NextResponse.json({ recommendations });
+    // Logging the full result is good for debugging, but be mindful of sensitive data.
+    console.log("Gemini API response (fixed and optimized):", result);
+    
+    // The generated text is directly on the result object.
+    const text = (result.text ?? "").trim();
+    return NextResponse.json({ text });
+    
   } catch (error) {
-    console.error("Groq API error:", error);
-    return NextResponse.json({ error: "Failed to get recommendations" }, { status: 500 });
+    console.error("Gemini API error:", error);
+    return NextResponse.json(
+      { error: "Failed to generate Gemini response." },
+      { status: 500 }
+    );
   }
 }
