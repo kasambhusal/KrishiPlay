@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Send, Bot, User, Sparkles, X } from "lucide-react";
+// Assuming these are standard components (shadcn/ui or similar)
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,60 @@ interface GeminiRecommendationProps {
     soilType?: string;
   };
 }
+
+// Simple, self-contained Markdown Renderer for the AI's output format
+const MarkdownRenderer = ({ text }: { text: string }) => {
+  // Function to convert simple markdown to HTML using regex
+  const renderMarkdown = (markdownText: string): string => {
+    // 1. Convert **bold** to <strong>
+    let html = markdownText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+    // 2. Handle paragraphs and line breaks for general text.
+    // The main content of the AI response usually comes with line breaks (\n).
+    const parts = html.split("\n");
+    let isListActive = false;
+    let finalHtml = "";
+
+    for (const part of parts) {
+      const trimmedPart = part.trim();
+
+      // Check for bullet points starting with '* '
+      if (trimmedPart.startsWith("* ")) {
+        if (!isListActive) {
+          finalHtml += '<ul class="list-disc ml-5 space-y-1 mt-2">';
+          isListActive = true;
+        }
+        let listItem = trimmedPart.substring(2); // remove '* '
+        finalHtml += `<li>${listItem}</li>`;
+      } else {
+        if (isListActive) {
+          finalHtml += "</ul>";
+          isListActive = false;
+        }
+        // If it's not empty, treat it as a paragraph
+        if (trimmedPart.length > 0) {
+          finalHtml += `<p class="mb-2">${trimmedPart}</p>`;
+        }
+      }
+    }
+
+    if (isListActive) {
+      finalHtml += "</ul>"; // Close the last list if it was active
+    }
+
+    return finalHtml;
+  };
+
+  const renderedHtml = renderMarkdown(text);
+
+  return (
+    <div
+      className="markdown-content prose prose-green max-w-none text-sm leading-relaxed"
+      // Note: Using dangerouslySetInnerHTML is necessary here to render the generated HTML structures (<ul>, <li>)
+      dangerouslySetInnerHTML={{ __html: renderedHtml }}
+    />
+  );
+};
 
 export default function GeminiRecommendation({
   location,
@@ -52,11 +107,17 @@ export default function GeminiRecommendation({
     setLoading(true);
 
     try {
+      // NOTE: We don't need to manually prepend the system instruction here,
+      // as the backend (route.ts) is already configured to handle the persona via the systemInstruction field.
       const response = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
+
+      if (!response.ok) {
+        throw new Error(`API returned status ${response.status}`);
+      }
 
       const data = await response.json();
       const botText =
@@ -85,15 +146,15 @@ export default function GeminiRecommendation({
   const handleOpen = () => {
     setOpen(true);
     if (messages.length === 0) {
+      // Automatically generate the initial recommendation prompt
       const introPrompt = `
 You are Krishi AI — a friendly agricultural assistant.
-Based on this data:
+Based on this data, give a warm intro and 3–4 recommended crops for this region. Ensure all recommendations are in a bulleted list format.
 - Location: lat ${location.lat}, lon ${location.lon}
 - Avg temperature: ${weatherData.temperature}°C
 - Avg precipitation: ${weatherData.precipitation}mm
 - Elevation: ${weatherData.elevation}m
 - Soil type: ${weatherData.soilType}
-Give a warm intro and 3–4 recommended crops for this region in short sentences.
 `;
       fetchMessage(introPrompt, "bot");
     }
@@ -118,7 +179,7 @@ Give a warm intro and 3–4 recommended crops for this region in short sentences
             {/* Header */}
             <div className="flex items-center justify-between bg-[#006634] text-white px-5 py-3 rounded-t-3xl">
               <div className="flex items-center space-x-2">
-                <Bot size={24} />
+                <Bot size={26} />
                 <h2 className="text-xl font-semibold">Krishi AI</h2>
               </div>
               <button
@@ -153,13 +214,20 @@ Give a warm intro and 3–4 recommended crops for this region in short sentences
                       <User className="text-blue-600 mt-1" size={22} />
                     )}
                     <div
-                      className={`px-4 py-2 rounded-2xl ${
+                      className={`px-4 py-2 rounded-2xl text-sm ${
                         msg.sender === "user"
                           ? "bg-[#006634] text-white"
                           : "bg-green-100 text-gray-800"
                       }`}
                     >
-                      {msg.text}
+                      {/* --- OPTIMIZATION HERE: Use MarkdownRenderer for bot text --- */}
+                      {msg.sender === "bot" ? (
+                        <MarkdownRenderer text={msg.text} />
+                      ) : (
+                        // User text can remain plain text
+                        <p>{msg.text}</p>
+                      )}
+                      {/* ----------------------------------------------------------- */}
                     </div>
                   </div>
                 </motion.div>

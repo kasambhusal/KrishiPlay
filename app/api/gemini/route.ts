@@ -55,8 +55,6 @@ export async function POST(req: Request) {
       // Removed the top-level systemInstruction field
     });
 
-    // Logging the full result is good for debugging, but be mindful of sensitive data.
-    console.log("Gemini API response (fixed and optimized):", result);
     
     // The generated text is directly on the result object.
     const text = (result.text ?? "").trim();
